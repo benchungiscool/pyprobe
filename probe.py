@@ -1,7 +1,7 @@
+import requests
+import uuid
 import sys
 import os
-import socket
-import uuid
 
 # -- what to do if no input is given --
 if len(sys.argv) == 1:
@@ -14,60 +14,75 @@ arguments = sys.argv[1:]
 
 # -- prints the help data --
 def displayhelp():
-    print("""
-    PyProbe by Ben Chung
-
-    Usage: 
-    python3 probe.py [arguments] [-h] 
-
-    Filename = a arguments, preferably a text file, from which to
-    read the domains to check on.
-    -h = Print help info then exit
-    """)
+    with open("help.txt", "r") as file:
+        help = file.readlines()
+        seperator = "\n"
+        print(seperator.join(help))
     exit()
 
 
-# -- process input from a textfile --
+# -- Process input from a textfile --
 def ProcessInput(file):
-    print("P", file)
+
+    folder = os.path.dirname(os.path.abspath(file))
+    file = os.path.join(folder, file)
+
     with open(file, "r") as file:
-        data = data.readlines()
+        data = file.readlines()
+
     return [item.replace("\n", "") for item in data]
 
 
 # -- Store result in a text file --
-def StoreResult(domain, request, code):
+def StoreResult(domain, content, code, httpfail=False, httpsfail=False):
+
     if not os.path.isdir(domain):
         os.mkdir(domain)
     os.chdir(domain)
-    
-    with open(uuid.uuid4(), "w") as file:
-        file.write("Server response: " + code + "\n")
-        file.write(request)
-        file.close()
+
+    with open(str(uuid.uuid4())+".txt", "w") as file:
+
+        if httpfail or httpsfail:
+            file.write("Request failed")
+               
+        else:
+            file.write("Server response: " + str(code) + "\n")
+            file.write(request)
+            file.close()
 
 
-# -- request worker --
+# -- Request Worker --
 def TestForService(domain, port):
+    
+    # -- Try for http server --
+    try:
+        r = requests.get("http://"+domain)
+        StoreResult(domain, r.content, r.status_code)
+        print("http://"+domain, r.status_code)
 
-    if port == 443:
-        connection = http.client.HTTPSConnection(domain, port)
-        connection.request("GET", "/")
-        response = connection.getresponse()
-        print("HTTP Server on " + domain + str(response))
-        StoreResult(domain, response.read(), response)
+    # -- If not, record this
+    except:
+        StoreResult(domain, "FAIL", "000", httpfail=True)
 
-    if port == 80:
-        connection = http.client.HTTPConnection(domain, port)
-        connection.request("GET", "/")
-        response = connection.getresponse()
-        print("HTTP Server on " + domain + str(response))
-        StoreResult(domain, response.read(), response)
+    # -- Try for https server --
+    try:
+        r = requests.get("https://"+domain)
+        StoreResult(domain, r.content, r.status_code)
+        print("https://"+domain, r.status_code)
 
+    # -- If not, record this --
+    except:
+        StoreResult(domain, "FAIL", "000", httpfail=True)
 
+    
 # -- Initiator function --
 def SendRequests(domainfile, ports):
-    domains = processinput(domainfile)
+
+    if not os.path.isdir("out"):
+        os.mkdir("out")
+    os.chdir("out")
+
+    domains = ProcessInput(domainfile)
     for domain in domains:
         for port in ports:
             TestForService(domain, port)
@@ -78,11 +93,6 @@ def SendRequests(domainfile, ports):
 if "-h" in arguments:
     displayhelp()
 
-# -- Makes output dir, then cds in --
-if not os.path.isdir("out"):
-    os.mkdir("out")
-os.chdir("out")
-
 # -- Argument Parser --
 for argument in arguments:
 
@@ -92,5 +102,6 @@ for argument in arguments:
 
     # -- if argument is a text file --
     if ".txt" in argument:
+        argument = os.path.realpath(argument)
         SendRequests(argument, [80,443])
 
