@@ -50,6 +50,8 @@ def StoreResult(domain, content, code, httpfail=False, httpsfail=False):
             file.write(request)
             file.close()
 
+    os.chdir("..")
+
 
 # -- Request Worker --
 def TestForService(domain, port):
