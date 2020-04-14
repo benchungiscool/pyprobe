@@ -3,21 +3,23 @@ import uuid
 import sys
 import os
 
-# -- what to do if no input is given --
+# -- What to do if no input is given --
 if len(sys.argv) == 1:
     print("Please provide an input such as: probe.py domains.txt",
           "For more help do probe.py -h")
     exit()
 
-# -- take data from the arguments --
+# -- The command the user issued, besides the python probe bit --
 arguments = sys.argv[1:]
 
-# -- prints the help data --
-def displayhelp():
+# -- Prints the help data --
+def DisplayHelp():
+
     with open("help.txt", "r") as file:
         help = file.readlines()
         seperator = "\n"
         print(seperator.join(help))
+
     exit()
 
 
@@ -34,20 +36,32 @@ def ProcessInput(file):
 
 
 # -- Store result in a text file --
-def StoreResult(domain, content, code, httpfail=False, httpsfail=False):
+def StoreResult(domain, port, content, code, fail=False, http=False, https=False):
 
     if not os.path.isdir(domain):
         os.mkdir(domain)
     os.chdir(domain)
 
+    if http:
+        if fail:
+            print("Request on", "http://"+domain+":"+port, "failed")
+        if not fail:
+            print("http://"+domain+":"+port, code)
+
+    if https:     
+        if fail:
+            print("Request on", "https://"+domain+":"+port, "failed")
+        if not fail:
+            print("https://"+domain+":"+port, r.status_code)
+
     with open(str(uuid.uuid4())+".txt", "w") as file:
 
-        if httpfail or httpsfail:
+        if fail:
             file.write("Request failed")
                
         else:
-            file.write("Server response: " + str(code) + "\n")
-            file.write(request)
+            file.write("Server response on port" + port + " : " + str(code) + "\n")
+            file.write(str(content))
             file.close()
 
     os.chdir("..")
@@ -57,24 +71,31 @@ def StoreResult(domain, content, code, httpfail=False, httpsfail=False):
 def TestForService(domain, port):
     
     # -- Try for http server --
-    try:
-        r = requests.get("http://"+domain)
-        StoreResult(domain, r.content, r.status_code)
-        print("http://"+domain, r.status_code)
+    dict = {
+            "Origin": "http://"+domain,
+            "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0.1"
+            }
 
-    # -- If not, record this
-    except:
-        StoreResult(domain, "FAIL", "000", httpfail=True)
+    r = requests.get("http://"+domain+":"+str(port), headers=dict)
+    if r.text:
+        StoreResult(domain, port, r.text, r.status_code, http=True)
+
+    else:
+        StoreResult(domain, port, "FAIL", "000", fail=True, http=True)
 
     # -- Try for https server --
-    try:
-        r = requests.get("https://"+domain)
-        StoreResult(domain, r.content, r.status_code)
-        print("https://"+domain, r.status_code)
+    dict = {
+            "Origin": "http://"+domain,
+            "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0.1"
+            }
 
-    # -- If not, record this --
-    except:
-        StoreResult(domain, "FAIL", "000", httpfail=True)
+    r = requests.get("https://"+domain+":"+str(port), headers=dict)
+    if r.text:
+        StoreResult(domain, port, r.text, r.status_code, https=True)
+
+    # -- If one not found, record this --
+    else:
+        StoreResult(domain, port, "FAIL", "000", fail=True, https=True)
 
     
 # -- Initiator function --
@@ -90,20 +111,24 @@ def SendRequests(domainfile, ports):
             TestForService(domain, port)
 
 
-# -- conditionals for the input from the command args --
-# -- checks if help mode is active --
+# -- Checks if help mode is active --
 if "-h" in arguments:
-    displayhelp()
+    DisplayHelp()
 
 # -- Argument Parser --
 for argument in arguments:
 
-    # -- if argument is ports --
+    # -- Process ports supplied by user --
+    ports = ["80","443"]
     if "-p" in argument:
-        print("Port support coming in a future update, check github")
+        argument.replace("-p", "")
+        argument = argument.split(",")
+        
+        for port in argument:
+            ports.append(str(port))
 
-    # -- if argument is a text file --
+    # -- Process domains supplied by user --
     if ".txt" in argument:
         argument = os.path.realpath(argument)
-        SendRequests(argument, [80,443])
+        SendRequests(argument, ports)
 
