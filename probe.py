@@ -36,10 +36,8 @@ def ProcessInput(file):
     return [item.replace("\n", "") for item in data]
 
 
-def ConstructRequest(host: str, protocol: str):
+def ConstructHeaders(host: str):
     return {
-        "GET": "/ "+protocol+"/1.1",
-        'Host': host,
         'User-Agent': "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0.1",
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-GB,en;q=0.5',
@@ -57,22 +55,20 @@ def StoreResult(domain, port, content, code,
         os.mkdir(domain)
     os.chdir(domain)
 
-    if http:
-        if fail:
-            print("Request on", "http://"+domain+":"+port, "failed")
-        if not fail:
+    if fail:
+        print("Request on", "https://"+domain+":"+port, "failed")
+
+    if not fail
+        if http:
             print("http://"+domain+":"+port, code)
 
-    if https:
-        if fail:
-            print("Request on", "https://"+domain+":"+port, "failed")
-        if not fail:
+        if https:
             print("https://"+domain+":"+port, code)
 
     with open(str(uuid.uuid4())+".txt", "w") as file:
 
         if fail:
-            file.write("Request failed")
+            file.write("Request failed \n")
 
         else:
             file.write("Server response on port" + port + " : " +
@@ -86,23 +82,33 @@ def StoreResult(domain, port, content, code,
 # -- Request Worker --
 def TestForService(domain, port):
 
-    # -- Try for http server --
+    s = requests.Session()
+
+    # -- Construct http request --
+    req = requests.Request("GET", "http://"+domain,
+                           headers=ConstructHeaders(domain))
+    prepped = req.prepare()
+
+    # -- Send request --
     try:
-        r = requests.get("http://"+domain+":"+str(port), 
-                         headers=ConstructRequest(domain, "HTTP"))
+        r = s.send(prepped)
         StoreResult(domain, port, r.text, r.status_code, http=True)
 
-    # -- If one not found, record this --
+    # -- If request doesn't work, record this --
     except:
         StoreResult(domain, port, "FAIL", "000", fail=True, http=True)
 
-    # -- Try for https server --
+    # -- Construct https request --
+    req = requests.Request("GET", "https://"+domain,
+                           headers=ConstructHeaders(domain))
+    prepped = req.prepare()
+
+    # -- Send request --
     try:
-        r = requests.get("https://"+domain+":"+str(port), 
-                         headers=ConstructRequest(domain, "HTTPS"))
+        s.send(prepped)
         StoreResult(domain, port, r.text, r.status_code, https=True)
 
-    # -- If one not found, record this --
+    # -- If it doesn't work, record this --
     except:
         StoreResult(domain, port, "FAIL", "000", fail=True, https=True)
 
