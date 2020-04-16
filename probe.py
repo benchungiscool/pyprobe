@@ -58,7 +58,7 @@ def StoreResult(domain, port, content, code,
     if fail:
         print("Request on", "https://"+domain+":"+port, "failed")
 
-    if not fail
+    if not fail:
         if http:
             print("http://"+domain+":"+port, code)
 
@@ -85,7 +85,7 @@ def TestForService(domain, port):
     s = requests.Session()
 
     # -- Construct http request --
-    req = requests.Request("GET", "http://"+domain,
+    req = requests.Request("GET", "http://"+domain+":"+str(port),
                            headers=ConstructHeaders(domain))
     prepped = req.prepare()
 
@@ -99,7 +99,7 @@ def TestForService(domain, port):
         StoreResult(domain, port, "FAIL", "000", fail=True, http=True)
 
     # -- Construct https request --
-    req = requests.Request("GET", "https://"+domain,
+    req = requests.Request("GET", "https://"+domain+":"+str(port),
                            headers=ConstructHeaders(domain))
     prepped = req.prepare()
 
@@ -146,4 +146,3 @@ for argument in arguments:
     if ".txt" in argument:
         argument = os.path.realpath(argument)
         SendRequests(argument, ports)
-
