@@ -1,2 +1,0 @@
-Server response on port80 : 200
-Hello the_unity_device!
