@@ -60,11 +60,6 @@ def StoreResult(domain, port, content, code,
         os.mkdir(domain)
     os.chdir(domain)
 
-    # -- Writing a fail wastes time --
-    if fail:
-        os.chdir("..")
-        return
-
     # -- Print result if in verbose mode --
     if verbose and not fail:
         if http:
@@ -85,7 +80,7 @@ def StoreResult(domain, port, content, code,
 # -- Request Worker --
 def TestForService(domain, port):
 
-    s = requests.Session()
+    session = requests.Session()
 
     # -- Construct http request --
     req = requests.Request("GET", "http://"+domain+":"+str(port),
@@ -94,12 +89,12 @@ def TestForService(domain, port):
 
     # -- Send request --
     try:
-        r = s.send(prepped)
+        r = session.send(prepped)
         StoreResult(domain, port, r.text, r.status_code, http=True)
 
-    # -- If request doesn't work, record this --
+    # -- If request doesn't work, move on --
     except:
-        StoreResult(domain, port, "FAIL", "000", fail=True, http=True)
+        pass
 
     # -- Construct https request --
     req = requests.Request("GET", "https://"+domain+":"+str(port),
@@ -108,12 +103,12 @@ def TestForService(domain, port):
 
     # -- Send request --
     try:
-        s.send(prepped)
+        session.send(prepped)
         StoreResult(domain, port, r.text, r.status_code, https=True)
 
-    # -- If it doesn't work, record this --
+    # -- If it doesn't work, move on --
     except:
-        StoreResult(domain, port, "FAIL", "000", fail=True, https=True)
+        pass
 
 
 # -- Initiator function --
