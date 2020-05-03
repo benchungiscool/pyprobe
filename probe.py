@@ -9,7 +9,7 @@ if len(sys.argv) == 1:
           "For more help do probe.py -h")
     exit()
 
-# -- The command the user issued, besides the python probe bit --
+# -- The command the user issued, besides the python initiate bit --
 arguments = sys.argv[1:]
 
 
@@ -27,15 +27,19 @@ def DisplayHelp():
 # -- Process input from a textfile --
 def ProcessInput(file):
 
+    # -- Find the file specified --
     folder = os.path.dirname(os.path.abspath(file))
     file = os.path.join(folder, file)
 
+    # -- Read from file --
     with open(file, "r") as file:
         data = file.readlines()
 
+    # -- Remove linebreaks --
     return [item.replace("\n", "") for item in data]
 
 
+# -- Nicer way to put the headers in a request --
 def ConstructHeaders(host: str):
     return {
         'User-Agent': "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0.1",
@@ -51,31 +55,30 @@ def ConstructHeaders(host: str):
 def StoreResult(domain, port, content, code,
                 fail=False, http=False, https=False):
 
+    # -- Create folder where result will go --
     if not os.path.isdir(domain):
         os.mkdir(domain)
     os.chdir(domain)
 
+    # -- Writing a fail wastes time --
     if fail:
-        print("Request on", "https://"+domain+":"+port, "failed")
+        os.chdir("..")
+        return
 
-    if not fail:
+    # -- Print result if in verbose mode --
+    if verbose and not fail:
         if http:
             print("http://"+domain+":"+port, code)
 
         if https:
             print("https://"+domain+":"+port, code)
 
-    with open(str(uuid.uuid4())+".txt", "w") as file:
+    # -- Write repsonse to file --
+    with open(domain+str(code)+".html", "w") as file:
+        file.write(str(content))
+        file.close()
 
-        if fail:
-            file.write("Request failed \n")
-
-        else:
-            file.write("Server response on port" + port + " : " +
-                       str(code) + "\n")
-            file.write(str(content))
-            file.close()
-
+    # -- Move up for next result --
     os.chdir("..")
 
 
@@ -141,6 +144,11 @@ for argument in arguments:
         
         for port in argument:
             ports.append(str(port))
+    
+    # -- Check for verbose mode, turn off by default --
+    verbose = False
+    if "-v" in argument:
+        verbose = True
 
     # -- Process domains supplied by user --
     if ".txt" in argument:
