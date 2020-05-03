@@ -1,5 +1,4 @@
 import requests
-import uuid
 import sys
 import os
 
