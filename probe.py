@@ -86,8 +86,6 @@ def StoreResult(domain, port, content, code,
 # -- Request Worker --
 def TestForService(domain, port, session):
 
-    print(domain)
-
     # -- Make some headers for a request --
     headers = ConstructHeaders(domain)
 
