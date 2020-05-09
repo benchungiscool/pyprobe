@@ -34,8 +34,15 @@ def ProcessInput(file):
     with open(file, "r") as file:
         data = file.readlines()
 
-    # -- Remove linebreaks --
-    return [item.replace("\n", "") for item in data]
+    # -- Removes all linebreaks from returned data --    
+    data = [item.replace("\n", "") for item in data]
+
+    # -- Removes blank items in data --
+    for item in data:
+        if not item:
+            data.remove(item)
+
+    return data
 
 
 # -- Nicer way to put the headers in a request --
@@ -59,7 +66,7 @@ def StoreResult(domain, port, content, code,
         os.mkdir(domain)
     os.chdir(domain)
 
-    # -- Print result if in verbose mode --
+    # -- Print response status if in verbose mode --
     if verbose and not fail:
         if http:
             print("http://"+domain+":"+port, code)
@@ -77,13 +84,16 @@ def StoreResult(domain, port, content, code,
 
 
 # -- Request Worker --
-def TestForService(domain, port):
+def TestForService(domain, port, session):
 
-    session = requests.Session()
+    print(domain)
+
+    # -- Make some headers for a request --
+    headers = ConstructHeaders(domain)
 
     # -- Construct http request --
     req = requests.Request("GET", "http://"+domain+":"+str(port),
-                           headers=ConstructHeaders(domain))
+                           headers=headers)
     prepped = req.prepare()
 
     # -- Send request --
@@ -117,10 +127,12 @@ def SendRequests(domainfile, ports):
         os.mkdir("out")
     os.chdir("out")
 
+    session = requests.Session()
+
     domains = ProcessInput(domainfile)
     for domain in domains:
         for port in ports:
-            TestForService(domain, port)
+            TestForService(domain, port, session)
 
 
 # -- Checks if help mode is active --
