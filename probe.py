@@ -38,9 +38,7 @@ def ProcessInput(file):
     data = [item.replace("\n", "") for item in data]
 
     ## Removes blank items in data
-    for item in data:
-        if not item:
-            data.remove(item)
+    data = [item for item in data if item]
 
     return data
 
