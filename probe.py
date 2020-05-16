@@ -56,7 +56,7 @@ def ConstructHeaders():
 
 
 # -- Store result in a text file --
-def StoreResult(domain, port, content, code,
+def StoreResult(domain, port, content, code, verbose=False,
                 fail=False, http=False, https=False):
 
     # -- Create folder where result will go --
@@ -82,7 +82,7 @@ def StoreResult(domain, port, content, code,
 
 
 # -- Request Worker --
-def TestForService(domain, port, session):
+def TestForService(domain, port, session, verbose):
 
     ## Make some headers for a request 
     headers = ConstructHeaders()
@@ -94,8 +94,9 @@ def TestForService(domain, port, session):
 
     ## Send request
     try:
-        r = session.send(prepped)
-        StoreResult(domain, port, r.text, r.status_code, http=True)
+        r = session.send(prepped, timeout=3)
+        StoreResult(domain, port, r.text, r.status_code, verbose=verbose,
+                    http=True)
 
     ## If request doesn't work, move on 
     except:
@@ -108,8 +109,9 @@ def TestForService(domain, port, session):
 
     ## Send request
     try:
-        session.send(prepped)
-        StoreResult(domain, port, r.text, r.status_code, https=True)
+        session.send(prepped, timeout=3)
+        StoreResult(domain, port, r.text, r.status_code, 
+                    verbose=verbose, https=True)
 
     ## If it doesn't work, move on
     except:
@@ -117,7 +119,7 @@ def TestForService(domain, port, session):
 
 
 ## Inititate scan
-def SendRequests(domainfile, ports):
+def SendRequests(domainfile, ports, verbose):
 
     if not os.path.isdir("out"):
         os.mkdir("out")
@@ -128,32 +130,33 @@ def SendRequests(domainfile, ports):
     domains = ProcessInput(domainfile)
     for domain in domains:
         for port in ports:
-            TestForService(domain, port, session)
+            TestForService(domain, port, session, verbose)
 
 
 ## Checks if the user has called help mode
 if "-h" in arguments:
     DisplayHelp()
 
-## Argument Parser
+## Check for verbose mode, set to False by default
+verbose = False
+if "-v" in arguments:
+    verbose = True
+
+## Information Parser
 for argument in arguments:
 
     ## Process ports supplied by user
     ports = ["80","443"]
     if "-p" in argument:
+
         argument.replace("-p", "")
         argument = argument.split(",")
         
         for port in argument:
             ports.append(str(port))
-    
-    ## Check for verbose mode, turn off by default
-    verbose = False
-    if "-v" in argument:
-        verbose = True
 
     ## Process domains supplied by user
     if ".txt" in argument:
         argument = os.path.realpath(argument)
-        SendRequests(argument, ports)
+        SendRequests(argument, ports, verbose)
 
