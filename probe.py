@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+import time
 import requests
 import sys
 import os
@@ -40,8 +42,12 @@ def ProcessInput(file):
     ## Removes blank items in data
     data = [item for item in data if item]
 
-    return data
+    index = len(data) // 2
 
+    if index > 1:
+        return data[index:], data[:index]
+
+    return data
 
 ## Returns headers for the request
 def ConstructHeaders():
@@ -55,16 +61,15 @@ def ConstructHeaders():
     }
 
 
-# -- Store result in a text file --
+## Store result in a text file
 def StoreResult(domain, port, content, code, verbose=False,
                 fail=False, http=False, https=False):
 
-    # -- Create folder where result will go --
     if not os.path.isdir(domain):
         os.mkdir(domain)
     os.chdir(domain)
 
-    # -- Print response status if in verbose mode --
+    ## Print response status if in verbose mode
     if verbose and not fail:
         if http:
             print("http://"+domain+":"+port, code)
@@ -72,16 +77,16 @@ def StoreResult(domain, port, content, code, verbose=False,
         if https:
             print("https://"+domain+":"+port, code)
 
-    # -- Write repsonse to file --
+    ## Write response to file
     with open(domain+str(code)+".html", "w") as file:
         file.write(str(content))
         file.close()
 
-    # -- Move up for next result --
+    ## Move up ready for next write
     os.chdir("..")
 
 
-# -- Request Worker --
+## Request worker
 def TestForService(domain, port, session, verbose):
 
     ## Make some headers for a request 
@@ -119,15 +124,16 @@ def TestForService(domain, port, session, verbose):
 
 
 ## Inititate scan
-def SendRequests(domainfile, ports, verbose):
+def SendRequests(domains, ports, verbose):
 
-    if not os.path.isdir("out"):
-        os.mkdir("out")
-    os.chdir("out")
+    ## If not in output dir, check if exists, if not create one
+    if "/out" not in os.getcwd():
+        if not os.path.isdir("out"):
+            os.mkdir("out")
+        os.chdir("out")
 
     session = requests.Session()
 
-    domains = ProcessInput(domainfile)
     for domain in domains:
         for port in ports:
             TestForService(domain, port, session, verbose)
@@ -141,6 +147,7 @@ if "-h" in arguments:
 verbose = False
 if "-v" in arguments:
     verbose = True
+
 
 ## Information Parser
 for argument in arguments:
@@ -158,5 +165,20 @@ for argument in arguments:
     ## Process domains supplied by user
     if ".txt" in argument:
         argument = os.path.realpath(argument)
-        SendRequests(argument, ports, verbose)
+        domains = ProcessInput(argument)
+
+if __name__ == "__main__":
+
+    index = len(domains)
+    if index > 1:
+
+        time1 = time.time()
+        
+        executors_list = []
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            executor.submit(SendRequests, domains[0], ports, verbose)
+            executor.submit(SendRequests, domains[1], ports, verbose)
+
+    else:
+        SendRequests(domains, ports, verbose)
 
